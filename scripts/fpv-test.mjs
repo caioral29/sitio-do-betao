@@ -1,0 +1,72 @@
+// Teste da visão de 1ª pessoa na Strada: GAME_URL=http://localhost:5173/ node scripts/fpv-test.mjs <pasta>
+import puppeteer from 'puppeteer-core';
+const OUT = process.argv[2] || '.';
+const browser = await puppeteer.launch({
+  executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  headless: 'new',
+  args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist', '--window-size=1280,800'],
+});
+const page = await browser.newPage();
+await page.setViewport({ width: 1280, height: 800 });
+const logs = [];
+page.on('console', (m) => { if (['error', 'warning'].includes(m.type()) && !m.text().includes('WebSocket')) logs.push(`[${m.type()}] ${m.text()}`); });
+page.on('pageerror', (e) => logs.push('[pageerror] ' + e.message));
+await page.goto(process.env.GAME_URL || 'http://localhost:5179/', { waitUntil: 'networkidle0' });
+await page.evaluate(() => localStorage.clear());
+await page.reload({ waitUntil: 'networkidle0' });
+await new Promise((r) => setTimeout(r, 1500));
+await page.click('#play');
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const ev = (fn, ...a) => page.evaluate(fn, ...a);
+const k = page.keyboard;
+const state = async (tag) => console.log(tag, await ev(() => { const s = window.__game.strada; return JSON.stringify({ x: +s.pos.x.toFixed(2), z: +s.pos.z.toFixed(2), v: +s.speed.toFixed(1), gear: s.gear, rpm: Math.round(s.rpm), fp: s.cockpit.active }); }));
+await wait(3000);
+await ev(() => { window.__game.setHour(11); document.getElementById('toasts').classList.add('hidden'); });
+await ev(() => window.__game.enterCar());
+await wait(900);
+await k.press('KeyV');
+await wait(1500);
+await state('fp parked');
+await page.screenshot({ path: `${OUT}/f0-parked.png` });
+await page.mouse.move(640, 400); await page.mouse.down(); await page.mouse.move(640, 560, { steps: 6 }); await wait(150);
+await page.screenshot({ path: `${OUT}/f0b-down.png` }); await page.mouse.up(); await wait(1600);
+await k.down('KeyW');
+await wait(1500);
+await state('gate');
+await page.screenshot({ path: `${OUT}/f1-gate.png` });
+await k.down('KeyD');
+await wait(700);
+await page.screenshot({ path: `${OUT}/f2-turn.png` });
+await k.up('KeyD');
+await wait(300);
+await k.down('KeyA');
+await wait(420);
+await k.up('KeyA');
+await wait(2200);
+await state('road');
+await page.screenshot({ path: `${OUT}/f3-road.png` });
+// olhar pro lado arrastando o mouse
+await page.mouse.move(640, 400);
+await page.mouse.down();
+await page.mouse.move(400, 420, { steps: 8 });
+await wait(200);
+await page.screenshot({ path: `${OUT}/f4-look.png` });
+await page.mouse.up();
+await k.up('KeyW');
+await k.down('Space');
+await wait(1200);
+await k.up('Space');
+await state('handbrake');
+await page.screenshot({ path: `${OUT}/f5-stopped.png` });
+await ev(() => window.__game.setHour(21.3));
+await k.down('KeyW');
+await wait(1500);
+await k.up('KeyW');
+await state('night');
+await page.screenshot({ path: `${OUT}/f6-night.png` });
+await k.press('KeyV');
+await wait(900);
+await state('3rd');
+await page.screenshot({ path: `${OUT}/f7-third.png` });
+console.log(logs.join('\n') || 'NO ERRORS');
+await browser.close();
