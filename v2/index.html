@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+    <meta name="theme-color" content="#2fc27e" />
+    <title>O Sítio do Betão 2</title>
+    <meta name="description" content="O Sítio do Betão — versão 2: o mesmo dia de folga na roça, agora com gráficos novos." />
+    <meta property="og:title" content="O Sítio do Betão 2" />
+    <meta property="og:description" content="Um dia de folga na roça: pesque no rio, colha coco, deite na rede, dirija a Strada e dance até o sol se pôr. Agora com gráficos novos!" />
+    <meta property="og:image" content="https://sitio-do-betao-v2.vercel.app/cover.jpg" />
+    <meta property="og:url" content="https://sitio-do-betao-v2.vercel.app/" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥥</text></svg>" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game"></canvas>
+      <div id="vignette"></div>
+      <div id="cam-fade"></div>
+
+      <div id="hud" class="hidden">
+        <div class="hud-tl">
+          <div class="chip"><span class="ico">🥥</span><b id="coco-n">0</b></div>
+          <div class="chip"><span class="ico">🐟</span><b id="fish-n">0</b></div>
+          <div class="chip clock"><span id="clock-ico">☀️</span><b id="clock">15:30</b><span id="ff" class="ff hidden">⏩</span></div>
+          <div id="boost" class="chip boost hidden">⚡ Energia de coco!</div>
+        </div>
+        <div class="hud-tr">
+          <button class="icon-btn" id="btn-journal" title="Diário (J)">📖</button>
+          <button class="icon-btn" id="btn-sound" title="Som (M)">🔊</button>
+          <button class="icon-btn" id="btn-pause" title="Menu (Esc)">☰</button>
+        </div>
+
+        <div id="prompt" class="prompt hidden"><span class="key" id="prompt-key">E</span><span id="prompt-label">Sentar</span></div>
+        <div id="marker" class="marker hidden">!</div>
+        <div id="bubbles"></div>
+        <div id="toasts"></div>
+        <div id="dance-tag" class="dance-tag hidden"></div>
+        <div id="drive" class="drive hidden">
+          <div class="speedo"><b id="speedo">0</b><small>km/h</small></div>
+          <div class="drive-name">🛻 Strada</div>
+          <button id="cam-btn" class="cam-btn" title="Trocar câmera (V)">👀 <span>1ª pessoa</span></button>
+        </div>
+
+        <div id="reel" class="reel hidden">
+          <div class="reel-title" id="reel-name">Puxa! Puxa!</div>
+          <div class="bar">
+            <div class="bar-label">LINHA</div>
+            <div class="track"><div class="danger-zone"></div><div id="reel-tension" class="fill tension"></div></div>
+          </div>
+          <div class="bar">
+            <div class="bar-label">PEIXE</div>
+            <div class="track"><div id="reel-progress" class="fill progress"></div></div>
+          </div>
+          <div class="reel-hint" id="reel-hint">Segure <b>E</b> / <b>Espaço</b> / clique para puxar · <b>solte</b> quando o peixe correr</div>
+        </div>
+
+        <div id="help" class="help">
+          <div><span class="k">WASD</span> andar <span class="k">Shift</span> correr <span class="k">Espaço</span> pular</div>
+          <div><span class="k">E</span> interagir <span class="k">Q</span> dançar <span class="k">C</span> beber coco <span class="k">J</span> diário</div>
+          <div><span class="k">🖱 arrastar</span> girar câmera <span class="k">roda</span> zoom <span class="k">H</span> esconder</div>
+        </div>
+      </div>
+
+      <div id="touch" class="touch hidden">
+        <div id="joy" class="joy"><div id="knob" class="knob"></div></div>
+        <div class="tbtns">
+          <button id="t-act" class="tbtn big">✋</button>
+          <button id="t-jump" class="tbtn">⤒</button>
+          <button id="t-dance" class="tbtn">💃</button>
+          <button id="t-coco" class="tbtn">🥥</button>
+          <button id="t-run" class="tbtn">🏃</button>
+        </div>
+      </div>
+
+      <div id="journal" class="panel-wrap hidden">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Diário do Betão</h2>
+            <button class="close" data-close="journal">✕</button>
+          </div>
+          <div class="tabs">
+            <button class="tab active" data-tab="fish">Peixes <span id="tab-fish-count"></span></button>
+            <button class="tab" data-tab="ach">Conquistas <span id="tab-ach-count"></span></button>
+            <button class="tab" data-tab="stats">Estatísticas</button>
+          </div>
+          <div class="panel-body"></div>
+        </div>
+      </div>
+
+      <div id="pause" class="panel-wrap hidden">
+        <div class="panel small">
+          <div class="panel-head"><h2>Pausa</h2></div>
+          <div class="pause-body">
+            <button class="btn primary" id="p-resume">Continuar</button>
+            <button class="btn" id="p-sound">Som: ligado</button>
+            <button class="btn" id="p-help">Mostrar/ocultar controles</button>
+            <button class="btn danger" id="p-reset">Apagar progresso</button>
+            <p class="note">O progresso é salvo automaticamente neste navegador.</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="ach-pop" class="ach-pop hidden"></div>
+
+      <div id="title" class="title">
+        <div class="title-bg"></div>
+        <div class="title-card">
+          <div class="logo">
+            <span class="logo-top">O Sítio do</span>
+            <span class="logo-main">Betão</span>
+            <span class="logo-badge">VERSÃO 2 · GRÁFICOS NOVOS</span>
+          </div>
+          <p class="tagline">Um dia de folga na roça: pesque no rio, colha coco, sente no banco e dance até o sol se pôr.</p>
+          <button id="play" class="btn play" disabled>Jogar</button>
+          <div class="title-keys">
+            <span><b>WASD</b> andar</span><span><b>E</b> interagir</span><span><b>Q</b> dançar</span><span><b>J</b> diário</span>
+          </div>
+        </div>
+        <div class="load-track"><div id="load-bar"></div></div>
+        <div class="loading" id="loading">Montando o sítio…</div>
+        <div class="credit">Texturas e plantas: Poly Haven (CC0)</div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

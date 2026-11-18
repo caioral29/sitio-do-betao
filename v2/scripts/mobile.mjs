@@ -1,0 +1,16 @@
+import puppeteer from 'puppeteer-core';
+const OUT = process.argv[2];
+const browser = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: 'new', args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
+const page = await browser.newPage();
+await page.setViewport({ width: 844, height: 390, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+const logs = [];
+page.on('pageerror', (e) => logs.push('[pageerror] ' + e.message));
+await page.goto(process.env.GAME_URL || 'http://localhost:5191/', { waitUntil: 'load' });
+await page.waitForSelector('#title.ready', { timeout: 120000 });
+await new Promise((r) => setTimeout(r, 1500));
+await page.screenshot({ path: `${OUT}/m-title.png` });
+await page.tap('#play');
+await new Promise((r) => setTimeout(r, 3000));
+await page.screenshot({ path: `${OUT}/m-play.png` });
+console.log(logs.join('\n'));
+await browser.close();

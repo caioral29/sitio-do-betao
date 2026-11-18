@@ -1,0 +1,23 @@
+import puppeteer from 'puppeteer-core';
+const browser = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: 'new', args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
+const page = await browser.newPage();
+await page.setViewport({ width: 1400, height: 850 });
+await page.goto('http://localhost:5190/', { waitUntil: 'load' });
+await page.waitForSelector('#title.ready', { timeout: 120000 });
+await page.click('#play');
+await new Promise((r) => setTimeout(r, 2500));
+const info = await page.evaluate(() => {
+  const g = window.__game, r = g.renderer;
+  r.info.autoReset = false; r.info.reset();
+  r.render(g.scene, g.camera);
+  const main = { calls: r.info.render.calls, tris: r.info.render.triangles };
+  r.info.reset();
+  g.composer.render(0.016);
+  const all = { calls: r.info.render.calls, tris: r.info.render.triangles };
+  r.info.autoReset = true;
+  let meshes = 0, inst = 0;
+  g.scene.traverse((o) => { if (o.isInstancedMesh) inst++; else if (o.isMesh) meshes++; });
+  return { main, all, meshes, inst, geos: r.info.memory.geometries, tex: r.info.memory.textures, programs: r.info.programs.length };
+});
+console.log(JSON.stringify(info));
+await browser.close();
